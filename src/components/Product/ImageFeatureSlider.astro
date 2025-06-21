@@ -1,23 +1,10 @@
 ---
 // components/Product/ImageFeatureSlider.astro
+import { findFeatureImages, getAvailableFeaturePaths } from "@/data/imageManifest";
 import { Image } from "astro:assets";
 
 interface Props {
   subDirectory?: string;
-}
-
-interface ImageFile {
-  filename: string;
-  url: string;
-  size: number;
-  lastModified: string;
-  colorInfo: string;
-}
-
-interface ImageManifest {
-  generated: string;
-  products: Record<string, ImageFile[]>;
-  features: Record<string, ImageFile[]>;
 }
 
 interface ProcessedImage {
@@ -36,79 +23,58 @@ const uniqueId = Math.random().toString(36).substring(2, 9);
 const mainSliderId = `main-swiper-${uniqueId}`;
 const thumbsSliderId = `thumbs-swiper-${uniqueId}`;
 
-// Load images server-side
+// Load images from the build-time generated manifest
 let featureImages: ProcessedImage[] = [];
 let hasImages = false;
 let errorMessage = "";
 
 if (subDirectory) {
   try {
-    // console.log(`🖼️ Loading feature images server-side for: ${subDirectory}`);
+    console.log(`🖼️ Loading feature images from manifest for: ${subDirectory}`);
     
-    // Load manifest server-side
-    const manifestResponse = await fetch(`${Astro.url.origin}/image-manifest.json`);
+    // Use the generated manifest data
+    const rawFeatureImages = findFeatureImages(subDirectory);
     
-    if (!manifestResponse.ok) {
-      throw new Error(`Manifest not found (${manifestResponse.status})`);
-    }
-    
-    const manifestData: ImageManifest = await manifestResponse.json();
-    
-    if (manifestData?.features) {
-      // Clean the path - remove leading slash
-      const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
-      // console.log(`🔍 Looking for feature category: "${cleanPath}"`);
+    if (rawFeatureImages.length > 0) {
+      // Sort images (prioritize -1. files, then by filename)
+      const sortedImages = rawFeatureImages.sort((a, b) => {
+        const aPriority = a.filename.includes("-1.") ? 1 : 2;
+        const bPriority = b.filename.includes("-1.") ? 1 : 2;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        return a.filename.localeCompare(b.filename);
+      });
       
-      // Look for exact match in features
-      let rawFeatureImages: ImageFile[] = manifestData.features[cleanPath] || [];
+      // Transform to ProcessedImage format
+      featureImages = sortedImages.map((file, index) => ({
+        id: `feature-${index}`,
+        url: file.url,
+        name: file.filename.replace(/\.[^/.]+$/, ""),
+        index: index + 1,
+        extension: file.filename.split('.').pop() || '',
+        filename: file.filename,
+        size: file.size
+      }));
       
-      // Try partial matches if no exact match
-      if (rawFeatureImages.length === 0) {
-        const availableFeatures = Object.keys(manifestData.features);
-        // console.log(`📁 Available feature categories: ${availableFeatures.join(', ')}`);
-        
-        const partialMatch = availableFeatures.find(
-          (cat: string) => cat.includes(cleanPath) || cleanPath.includes(cat)
-        );
-        
-        if (partialMatch) {
-          // console.log(`🔍 Found partial match: ${partialMatch}`);
-          rawFeatureImages = manifestData.features[partialMatch] || [];
-        }
-      }
-      
-      // Transform and sort images
-      if (rawFeatureImages.length > 0) {
-        // Sort images (prioritize -1. files, then by filename)
-        const sortedImages = rawFeatureImages.sort((a: ImageFile, b: ImageFile) => {
-          const aPriority = a.filename.includes("-1.") ? 1 : 2;
-          const bPriority = b.filename.includes("-1.") ? 1 : 2;
-          if (aPriority !== bPriority) return aPriority - bPriority;
-          return a.filename.localeCompare(b.filename);
-        });
-        
-        // Transform to ProcessedImage format
-        featureImages = sortedImages.map((file: ImageFile, index: number) => ({
-          id: `feature-${index}`,
-          url: file.url,
-          name: file.filename.replace(/\.[^/.]+$/, ""),
-          index: index + 1,
-          extension: file.filename.split('.').pop() || '',
-          filename: file.filename,
-          size: file.size
-        }));
-        
-        hasImages = true;
-        // console.log(`✅ Found ${featureImages.length} feature images server-side`);
-      } else {
-        // console.log("⚠️ No feature images found");
-        errorMessage = `No images found for "${cleanPath}"`;
-      }
+      hasImages = true;
+      console.log(`✅ Found ${featureImages.length} feature images from manifest`);
     } else {
-      errorMessage = "Invalid manifest format";
+      console.log("⚠️ No feature images found in manifest");
+      
+      // Debug: Show available feature paths for troubleshooting
+      const availablePaths = getAvailableFeaturePaths();
+      console.log(`🔍 Available feature paths (first 10):`, availablePaths.slice(0, 10));
+      
+      // Check for similar paths
+      const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
+      const similarPaths = availablePaths.filter(path => 
+        path.includes(cleanPath) || cleanPath.includes(path)
+      );
+      console.log(`🔍 Similar paths for "${cleanPath}":`, similarPaths);
+      
+      errorMessage = `No images found for "${cleanPath}"`;
     }
   } catch (error) {
-    console.error("❌ Error loading feature images server-side:", error);
+    console.error("❌ Error loading feature images from manifest:", error);
     errorMessage = `Failed to load images: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
 } else {
@@ -187,98 +153,96 @@ if (subDirectory) {
   )}
 </div>
 
- 
-    {/* <!-- Swiper CSS --> */}
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.css"
-    />
+{/* <!-- Swiper CSS --> */}
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.css"
+/>
 
-    {/* <!-- Swiper Initialization Script --> */}
-    <script define:vars={{ mainSliderId, thumbsSliderId, uniqueId, imageCount: featureImages.length }}>
-      let swiperInitialized = false;
+{/* <!-- Swiper Initialization Script --> */}
+<script define:vars={{ mainSliderId, thumbsSliderId, uniqueId, imageCount: featureImages.length }}>
+  let swiperInitialized = false;
 
-      document.addEventListener("DOMContentLoaded", () => {
-        initializeSwiper();
-      });
+  document.addEventListener("DOMContentLoaded", () => {
+    initializeSwiper();
+  });
 
-      document.addEventListener("astro:page-load", () => {
-        swiperInitialized = false;
-        initializeSwiper();
-      });
+  document.addEventListener("astro:page-load", () => {
+    swiperInitialized = false;
+    initializeSwiper();
+  });
 
-      async function initializeSwiper() {
-        if (swiperInitialized) return;
-        
-        console.log(`🎛️ Initializing Swiper with ${imageCount} pre-loaded slides`);
+  async function initializeSwiper() {
+    if (swiperInitialized) return;
+    
+    console.log(`🎛️ Initializing Swiper with ${imageCount} pre-loaded slides`);
 
-        // Load Swiper if not already loaded
-        if (typeof Swiper === "undefined") {
-          // console.log("📦 Loading Swiper library...");
-          const script = document.createElement("script");
-          script.src = "https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.js";
-          script.onload = initializeSwiper;
-          document.head.appendChild(script);
-          return;
-        }
+    // Load Swiper if not already loaded
+    if (typeof Swiper === "undefined") {
+      console.log("📦 Loading Swiper library...");
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.js";
+      script.onload = initializeSwiper;
+      document.head.appendChild(script);
+      return;
+    }
 
-        const mainContainer = document.getElementById(mainSliderId);
-        const thumbsContainer = document.getElementById(thumbsSliderId);
+    const mainContainer = document.getElementById(mainSliderId);
+    const thumbsContainer = document.getElementById(thumbsSliderId);
 
-        if (!mainContainer || !thumbsContainer) {
-          console.error("❌ Slider containers not found");
-          return;
-        }
+    if (!mainContainer || !thumbsContainer) {
+      console.error("❌ Slider containers not found");
+      return;
+    }
 
-        // Check if we have slides (they should already be rendered)
-        const mainSlides = mainContainer.querySelectorAll('.swiper-slide');
-        if (mainSlides.length === 0) {
-          // console.log('⚠️ No slides found for Swiper initialization');
-          return;
-        }
+    // Check if we have slides (they should already be rendered)
+    const mainSlides = mainContainer.querySelectorAll('.swiper-slide');
+    if (mainSlides.length === 0) {
+      console.log('⚠️ No slides found for Swiper initialization');
+      return;
+    }
 
-        swiperInitialized = true;
+    swiperInitialized = true;
 
-        // Initialize thumbnails swiper first
-        const thumbsSwiper = new Swiper(`#${thumbsSliderId}`, {
-          slidesPerView: 4,
-          spaceBetween: 8,
-          watchSlidesProgress: true,
-          slideToClickedSlide: true,
-          breakpoints: {
-            320: { slidesPerView: 2 },
-            640: { slidesPerView: 2 },
-            768: { slidesPerView: 3 },
-            1024: { slidesPerView: 4 },
-          },
-        });
+    // Initialize thumbnails swiper first
+    const thumbsSwiper = new Swiper(`#${thumbsSliderId}`, {
+      slidesPerView: 4,
+      spaceBetween: 8,
+      watchSlidesProgress: true,
+      slideToClickedSlide: true,
+      breakpoints: {
+        320: { slidesPerView: 2 },
+        640: { slidesPerView: 2 },
+        768: { slidesPerView: 3 },
+        1024: { slidesPerView: 4 },
+      },
+    });
 
-        // Initialize main swiper
-        const mainSwiper = new Swiper(`#${mainSliderId}`, {
-          spaceBetween: 0,
-          navigation: {
-            nextEl: ".swiper-button-next",
-            prevEl: ".swiper-button-prev",
-          },
-          thumbs: {
-            swiper: thumbsSwiper,
-          },
-          effect: "fade",
-          fadeEffect: {
-            crossFade: true,
-          },
-          loop: mainSlides.length > 1,
-        });
+    // Initialize main swiper
+    const mainSwiper = new Swiper(`#${mainSliderId}`, {
+      spaceBetween: 0,
+      navigation: {
+        nextEl: ".swiper-button-next",
+        prevEl: ".swiper-button-prev",
+      },
+      thumbs: {
+        swiper: thumbsSwiper,
+      },
+      effect: "fade",
+      fadeEffect: {
+        crossFade: true,
+      },
+      loop: mainSlides.length > 1,
+    });
 
-        // Update swipers after initialization
-        setTimeout(() => {
-          mainSwiper.update();
-          thumbsSwiper.update();
-          // console.log(`✅ Swiper initialized successfully with ${mainSlides.length} slides`);
-        }, 100);
-      }
-    </script>
- 
+    // Update swipers after initialization
+    setTimeout(() => {
+      mainSwiper.update();
+      thumbsSwiper.update();
+      console.log(`✅ Swiper initialized successfully with ${mainSlides.length} slides`);
+    }, 100);
+  }
+</script>
 
 <style>
   .swiper {
