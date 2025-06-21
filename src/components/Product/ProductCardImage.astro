@@ -1,8 +1,8 @@
 ---
 // components/Product/ProductCardImage.astro
 import { Image } from "astro:assets";
-import LVLogo from "../Icons/LVLogo.astro";
-import { findFeatureImages, getPrimaryImageUrl, loadImageManifest } from "@/lib/manifestLoader";
+import LVLogo from "../Icons/LVLogo.astro"; 
+import { findFeatureImages, getAvailableFeaturePaths, getPrimaryImageUrl } from "@/data/imageManifest";
 
 interface Props {
   subDirectory?: string;
@@ -23,37 +23,31 @@ function getProductName(csvPath: string): string {
 
 const imageName = getProductName(subDirectory);
 
-// Load manifest and find images
+// Find images using the build-time generated manifest
 let primaryImageUrl = "";
 let hasImage = false;
 
 if (subDirectory) {
   try {
-    const manifest = await loadImageManifest();
+    const featureImages = findFeatureImages(subDirectory);
     
-    if (manifest) {
-      const featureImages = findFeatureImages(manifest, subDirectory);
-      
-      if (featureImages.length > 0) {
-        primaryImageUrl = getPrimaryImageUrl(featureImages);
-        hasImage = true;
-        console.log(`  ✅ Found ${featureImages.length} images, selected: ${featureImages[0].filename}`);
-      } else {
-        console.log(`  ❌ No images found for path: ${subDirectory}`);
-        
-        // Debug: Show available feature paths
-        const availablePaths = Object.keys(manifest.features || {});
-        console.log(`  🔍 Available paths (first 10):`, availablePaths.slice(0, 10));
-        
-        // Check for similar paths
-        const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
-        const similarPaths = availablePaths.filter(path => 
-          path.includes(cleanPath) || cleanPath.includes(path)
-        );
-        console.log(`  🔍 Similar paths:`, similarPaths);
-      }
+    if (featureImages.length > 0) {
+      primaryImageUrl = getPrimaryImageUrl(featureImages);
+      hasImage = true;
+      console.log(`  ✅ Found ${featureImages.length} images, selected: ${featureImages[0].filename}`);
     } else {
-      console.log("  ❌ Could not load manifest");
+      console.log(`  ❌ No images found for path: ${subDirectory}`);
+      
+      // Debug: Show available feature paths
+      const availablePaths = getAvailableFeaturePaths();
+      console.log(`  🔍 Available paths (first 10):`, availablePaths.slice(0, 10));
+      
+      // Check for similar paths
+      const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
+      const similarPaths = availablePaths.filter(path => 
+        path.includes(cleanPath) || cleanPath.includes(path)
+      );
+      console.log(`  🔍 Similar paths:`, similarPaths);
     }
   } catch (error) {
     console.error("  ❌ Error processing images:", error);
