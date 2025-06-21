@@ -124,9 +124,7 @@ export function getAvailableProductPaths(): string[] {
   }
 }
 
-// Run if called directly
-if (require.main === module) {
-  generateManifestModule();
-}
+// Run the function directly (since this script is meant to be executed)
+generateManifestModule();
 
 export { generateManifestModule };

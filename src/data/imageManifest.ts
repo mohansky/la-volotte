@@ -1,4 +1,21 @@
-{
+// This file is auto-generated. Do not edit manually.
+// Generated from image-manifest.json at: 2025-06-21T14:55:53.673Z
+
+export interface ImageFile {
+  filename: string;
+  url: string;
+  size: number;
+  lastModified: string;
+  colorInfo: string;
+}
+
+export interface ImageManifest {
+  generated: string;
+  products: Record<string, ImageFile[]>;
+  features: Record<string, ImageFile[]>;
+}
+
+export const imageManifest: ImageManifest = {
   "generated": "2025-06-21T14:55:49.175Z",
   "products": {
     "bc-garn": [
@@ -7928,4 +7945,56 @@
       }
     ]
   }
+};
+
+export function findFeatureImages(subDirectory: string): ImageFile[] {
+  if (!subDirectory) {
+    return [];
+  }
+
+  // Clean the path - remove leading slash
+  const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
+  
+  // Look for exact match first in features
+  let featureImages: ImageFile[] = imageManifest.features[cleanPath] || [];
+  
+  // Try partial matches if no exact match
+  if (featureImages.length === 0) {
+    const availableFeatures = Object.keys(imageManifest.features);
+    
+    const partialMatch = availableFeatures.find(
+      (cat: string) => cat.includes(cleanPath) || cleanPath.includes(cat)
+    );
+    
+    if (partialMatch) {
+      featureImages = imageManifest.features[partialMatch] || [];
+    }
+  }
+  
+  return featureImages;
+}
+
+export function getPrimaryImageUrl(images: ImageFile[]): string {
+  if (images.length === 0) {
+    return "";
+  }
+
+  // Sort images to prioritize "-1." files and alphabetical order
+  const sortedImages = images.sort((a: ImageFile, b: ImageFile) => {
+    const aPriority = a.filename.includes("-1.") ? 1 : 2;
+    const bPriority = b.filename.includes("-1.") ? 1 : 2;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    return a.filename.localeCompare(b.filename);
+  });
+  
+  return sortedImages[0].url;
+}
+
+// Debug helper functions
+export function getAvailableFeaturePaths(): string[] {
+  return Object.keys(imageManifest.features);
+}
+
+export function getAvailableProductPaths(): string[] {
+  return Object.keys(imageManifest.products);
 }
