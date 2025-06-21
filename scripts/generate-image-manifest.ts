@@ -32,14 +32,6 @@ const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
 const PUBLIC_R2_BUCKET_URL = process.env.PUBLIC_R2_BUCKET_URL;
 
-// console.log('🔍 Detailed environment variable check:');
-// console.log('R2_ENDPOINT:', R2_ENDPOINT ? `✅ Set (${R2_ENDPOINT.substring(0, 20)}...)` : '❌ Missing/undefined');
-// console.log('R2_ACCESS_KEY_ID:', R2_ACCESS_KEY_ID ? `✅ Set (${R2_ACCESS_KEY_ID.substring(0, 10)}...)` : '❌ Missing/undefined');
-// console.log('R2_SECRET_ACCESS_KEY:', R2_SECRET_ACCESS_KEY ? `✅ Set (${R2_SECRET_ACCESS_KEY.substring(0, 10)}...)` : '❌ Missing/undefined');
-// console.log('R2_BUCKET_NAME:', R2_BUCKET_NAME ? `✅ Set (${R2_BUCKET_NAME})` : '❌ Missing/undefined');
-// console.log('PUBLIC_R2_BUCKET_URL:', PUBLIC_R2_BUCKET_URL ? `✅ Set (${PUBLIC_R2_BUCKET_URL})` : '❌ Missing/undefined');
-// console.log('');
-// console.log('📋 All available environment variables starting with R2_ or PUBLIC_R2_:');
 Object.keys(process.env)
   .filter(key => key.startsWith('R2_') || key.startsWith('PUBLIC_R2_'))
   .forEach(key => {
@@ -96,8 +88,6 @@ async function generateImageManifest(): Promise<void> {
   let processedFiles = 0;
 
   try {
-    // console.log('📡 Fetching images from R2...');
-    // List all objects in the products/ directory
     const command = new ListObjectsV2Command({
       Bucket: R2_BUCKET_NAME!,
       Prefix: 'products/',

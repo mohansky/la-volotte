@@ -34,10 +34,12 @@ export default defineConfig({
       noExternal: ["slick-carousel", "jquery"],
     },
     resolve: {
-      alias: {
-        // Fix for MessageChannel issue in Workers
-        "react-dom/server": "react-dom/server.edge",
-      },
+      alias:
+        process.env.NODE_ENV === "production"
+          ? {
+              "react-dom/server": "react-dom/server.edge",
+            }
+          : {},
     },
   },
   env: {
