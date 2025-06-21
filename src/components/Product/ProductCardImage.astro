@@ -86,23 +86,34 @@ if (subDirectory) {
   } catch (error) {
     console.error("Error loading manifest server-side:", error);
   }
+} else {
+  console.log("  ❌ No subDirectory provided");
 }
+
+console.log("🏁 Final result - hasImage:", hasImage, "primaryImageUrl:", primaryImageUrl ? primaryImageUrl.substring(0, 50) + "..." : "none");
 ---
 
 <figure class="relative">
   {hasImage ? (
-    <Image
+    <img
       src={primaryImageUrl}
       alt={imageName}
       width={width}
       height={height}
       class="object-contain bg-white border border-primary rounded-lg"
       loading="lazy"
-      format="webp"
     />
   ) : (
-    <div class="bg-white border border-primary rounded-lg flex items-center justify-center">
-      <LVLogo />
+    <div class="bg-white border border-primary rounded-lg flex items-center justify-center p-4">
+      <div class="text-center">
+        <LVLogo />
+        <div class="text-xs mt-2 text-gray-500 max-w-32 overflow-hidden">
+          Path: {subDirectory || "none"}
+        </div>
+        <div class="text-xs text-red-500">
+          No image found
+        </div>
+      </div>
     </div>
   )}
 </figure>
