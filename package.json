@@ -3,11 +3,12 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "build": "npm run manifest && astro build",
+    "dev": "npm run manifest && npm run manifest:module && astro dev",
+    "build": "npm run manifest && npm run manifest:module && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "manifest": "tsx scripts/generate-image-manifest.ts",
+    "manifest:module": "tsx scripts/generateManifestModule.ts",
     "manifest:compile": "tsc -p scripts/tsconfig.json",
     "manifest:build": "npm run manifest:compile && node dist/scripts/generate-image-manifest.js"
   },
