@@ -25,6 +25,9 @@ interface ImageManifest {
 
 const { subDirectory = "", width = 600, height = 600 } = Astro.props;
 
+console.log("🔍 ProductCardImage Debug:");
+console.log("  subDirectory prop:", JSON.stringify(subDirectory));
+
 function getProductName(csvPath: string): string {
   if (!csvPath) return "Image";
   const pathParts = csvPath.split("/");
@@ -39,38 +42,43 @@ let hasImage = false;
 
 if (subDirectory) {
   try {
-    // You'll need to adjust this path based on your project structure
-    const manifestResponse = await fetch(
-      `${Astro.url.origin}/image-manifest.json`
-    );
+    const manifestResponse = await fetch(`${Astro.url.origin}/image-manifest.json`);
+    
+    if (!manifestResponse.ok) {
+      throw new Error(`Manifest not found (${manifestResponse.status})`);
+    }
+    
     const manifestData: ImageManifest = await manifestResponse.json();
-
+    
     if (manifestData?.features) {
-      const cleanPath = subDirectory.startsWith("/")
-        ? subDirectory.slice(1)
-        : subDirectory;
+      // Clean the path - remove leading slash (same as ImageFeatureSlider)
+      const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
+      
+      // Look for exact match in features (same as ImageFeatureSlider)
       let featureImages: ImageFile[] = manifestData.features[cleanPath] || [];
-
-      // Try partial matches if no exact match
+      
+      // Try partial matches if no exact match (same as ImageFeatureSlider)
       if (featureImages.length === 0) {
         const availableFeatures = Object.keys(manifestData.features);
+        
         const partialMatch = availableFeatures.find(
           (cat: string) => cat.includes(cleanPath) || cleanPath.includes(cat)
         );
+        
         if (partialMatch) {
           featureImages = manifestData.features[partialMatch] || [];
         }
       }
-
-      // Get primary image URL
+      
+      // Get primary image URL (same sorting logic as ImageFeatureSlider)
       if (featureImages.length > 0) {
-        const sortedImages = featureImages.sort(
-          (a: ImageFile, b: ImageFile) => {
-            const aPriority = a.filename.includes("-1.") ? 1 : 2;
-            const bPriority = b.filename.includes("-1.") ? 1 : 2;
-            return aPriority - bPriority;
-          }
-        );
+        const sortedImages = featureImages.sort((a: ImageFile, b: ImageFile) => {
+          const aPriority = a.filename.includes("-1.") ? 1 : 2;
+          const bPriority = b.filename.includes("-1.") ? 1 : 2;
+          if (aPriority !== bPriority) return aPriority - bPriority;
+          return a.filename.localeCompare(b.filename);
+        });
+        
         primaryImageUrl = sortedImages[0].url;
         hasImage = true;
       }
@@ -82,23 +90,21 @@ if (subDirectory) {
 ---
 
 <figure class="relative">
-  {
-    hasImage ? (
-      <Image
-        src={primaryImageUrl}
-        alt={imageName}
-        width={width}
-        height={height}
-        class="object-contain bg-white border border-primary rounded-lg"
-        loading="lazy"
-        format="webp"
-      />
-    ) : (
-      <div class="bg-white border border-primary rounded-lg flex items-center justify-center">
-        <LVLogo />
-      </div>
-    )
-  }
+  {hasImage ? (
+    <Image
+      src={primaryImageUrl}
+      alt={imageName}
+      width={width}
+      height={height}
+      class="object-contain bg-white border border-primary rounded-lg"
+      loading="lazy"
+      format="webp"
+    />
+  ) : (
+    <div class="bg-white border border-primary rounded-lg flex items-center justify-center">
+      <LVLogo />
+    </div>
+  )}
 </figure>
 
 <style>
