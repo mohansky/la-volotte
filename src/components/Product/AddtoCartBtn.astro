@@ -1,6 +1,7 @@
 ---
 // components/Product/AddtoCartBtn.astro
 import Button from "../ui/Button.astro";
+import { findFeatureImages, getPrimaryImageUrl, imageManifest } from "../../data/imageManifest";
 
 interface Product {
   id?: number | string;
@@ -36,25 +37,71 @@ let farbenOptions: string[] = [];
 let featureImage = product.featureImage;
 
 if (farbenFotos) {
-  // Use Vite's import.meta.glob to get all images for this product
-  const imageModules = import.meta.glob('/src/content/products/images/**/*.{png,jpg,jpeg,gif,webp}', { 
-    eager: true,
-    query: '?url',
-    import: 'default'
-  });
-  
-  // Filter images for the specific farbenFotos folder
-  const folderImages = Object.entries(imageModules)
-    .filter(([path]) => path.includes(`/images/${farbenFotos}/`))
-    .map(([path, url]) => ({
-      path,
-      url: url as string,
-      name: path.split('/').pop()?.split('.')[0] || ''
-    }));
-
-  if (folderImages.length > 0) {
-    farbenOptions = folderImages.map(img => img.name);
-    featureImage = folderImages[0].url;
+  try {
+    // First, try to get the feature image from the manifest
+    const featureImages = findFeatureImages(farbenFotos);
+    
+    if (featureImages.length > 0) {
+      // Get the primary feature image
+      featureImage = getPrimaryImageUrl(featureImages);
+      console.log(`✅ Found feature image for ${farbenFotos}: ${featureImage}`);
+    }
+    
+    // Now get color variant images from the products section of the manifest
+    // The farbenFotos typically corresponds to a product category
+    let colorImages = imageManifest.products[farbenFotos] || [];
+    
+    // If no direct match, try partial matching
+    if (colorImages.length === 0) {
+      const availableProducts = Object.keys(imageManifest.products);
+      const partialMatch = availableProducts.find(
+        (category) => category.includes(farbenFotos) || farbenFotos.includes(category)
+      );
+      
+      if (partialMatch) {
+        colorImages = imageManifest.products[partialMatch] || [];
+        console.log(`🔍 Found partial match for colors: ${partialMatch}`);
+      }
+    }
+    
+    if (colorImages.length > 0) {
+      // Extract color options from image filenames
+      farbenOptions = colorImages.map(img => {
+        // Extract color info from the colorInfo field or filename
+        if (img.colorInfo && img.colorInfo !== img.filename.replace(/\.[^/.]+$/, "")) {
+          return img.colorInfo;
+        }
+        
+        // Fallback to extracting from filename
+        const nameWithoutExt = img.filename.replace(/\.[^/.]+$/, "");
+        
+        // Pattern for "albmerino 7353M Beige-Meliert" type filenames
+        const colorMatch = nameWithoutExt.match(/(\w+)\s+(\d+[A-Z]?)\s+(.+)$/);
+        if (colorMatch) {
+          const [, , colorCode, colorName] = colorMatch;
+          return `${colorCode} ${colorName.replace(/-/g, ' ')}`;
+        }
+        
+        // Pattern for "Echt_8073_01_1" type filenames
+        const structuredMatch = nameWithoutExt.match(/(\w+)_(\d+)_(\d+)_(\d+)/);
+        if (structuredMatch) {
+          const [, productName, colorCode, colorNum] = structuredMatch;
+          return `${colorCode}-${colorNum}`;
+        }
+        
+        // Fallback to cleaned filename
+        return nameWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      });
+      
+      // Remove duplicates and sort
+      farbenOptions = [...new Set(farbenOptions)].sort();
+      
+      console.log(`🎨 Found ${farbenOptions.length} color options for ${farbenFotos}:`, farbenOptions.slice(0, 5));
+    } else {
+      console.log(`⚠️ No color images found for ${farbenFotos}`);
+    }
+  } catch (error) {
+    console.error(`❌ Error processing images for ${farbenFotos}:`, error);
   }
 }
 
@@ -67,13 +114,17 @@ const customClasses = customClass || className || "";
 const finalClassName = [baseClasses, widthClasses, customClasses]
   .filter(Boolean)
   .join(" ");
+
+console.log(`🛒 Cart button for ${name}:`);
+console.log(`   Feature Image: ${featureImage ? featureImage.substring(0, 50) + '...' : 'none'}`);
+console.log(`   Color Options: ${farbenFotosOptions || 'none'}`);
 ---
 
 <Button
   variant={variant}
   size={size}
   className={finalClassName}
-  title=`${name} zum Warenkorb hinzufügen`
+  title={`${name} zum Warenkorb hinzufügen`}
   data-item-id={id}
   data-item-price={preis}
   data-item-url={slug}
