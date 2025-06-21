@@ -2,25 +2,12 @@
 // components/Product/ProductCardImage.astro
 import { Image } from "astro:assets";
 import LVLogo from "../Icons/LVLogo.astro";
+import { findFeatureImages, getPrimaryImageUrl, loadImageManifest } from "@/lib/manifestLoader";
 
 interface Props {
   subDirectory?: string;
   width?: number;
   height?: number;
-}
-
-interface ImageFile {
-  filename: string;
-  url: string;
-  size: number;
-  lastModified: string;
-  colorInfo: string;
-}
-
-interface ImageManifest {
-  generated: string;
-  products: Record<string, ImageFile[]>;
-  features: Record<string, ImageFile[]>;
 }
 
 const { subDirectory = "", width = 600, height = 600 } = Astro.props;
@@ -36,55 +23,40 @@ function getProductName(csvPath: string): string {
 
 const imageName = getProductName(subDirectory);
 
-// Load manifest server-side
+// Load manifest and find images
 let primaryImageUrl = "";
 let hasImage = false;
 
 if (subDirectory) {
   try {
-    const manifestResponse = await fetch(`${Astro.url.origin}/image-manifest.json`);
+    const manifest = await loadImageManifest();
     
-    if (!manifestResponse.ok) {
-      throw new Error(`Manifest not found (${manifestResponse.status})`);
-    }
-    
-    const manifestData: ImageManifest = await manifestResponse.json();
-    
-    if (manifestData?.features) {
-      // Clean the path - remove leading slash (same as ImageFeatureSlider)
-      const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
+    if (manifest) {
+      const featureImages = findFeatureImages(manifest, subDirectory);
       
-      // Look for exact match in features (same as ImageFeatureSlider)
-      let featureImages: ImageFile[] = manifestData.features[cleanPath] || [];
-      
-      // Try partial matches if no exact match (same as ImageFeatureSlider)
-      if (featureImages.length === 0) {
-        const availableFeatures = Object.keys(manifestData.features);
-        
-        const partialMatch = availableFeatures.find(
-          (cat: string) => cat.includes(cleanPath) || cleanPath.includes(cat)
-        );
-        
-        if (partialMatch) {
-          featureImages = manifestData.features[partialMatch] || [];
-        }
-      }
-      
-      // Get primary image URL (same sorting logic as ImageFeatureSlider)
       if (featureImages.length > 0) {
-        const sortedImages = featureImages.sort((a: ImageFile, b: ImageFile) => {
-          const aPriority = a.filename.includes("-1.") ? 1 : 2;
-          const bPriority = b.filename.includes("-1.") ? 1 : 2;
-          if (aPriority !== bPriority) return aPriority - bPriority;
-          return a.filename.localeCompare(b.filename);
-        });
-        
-        primaryImageUrl = sortedImages[0].url;
+        primaryImageUrl = getPrimaryImageUrl(featureImages);
         hasImage = true;
+        console.log(`  ✅ Found ${featureImages.length} images, selected: ${featureImages[0].filename}`);
+      } else {
+        console.log(`  ❌ No images found for path: ${subDirectory}`);
+        
+        // Debug: Show available feature paths
+        const availablePaths = Object.keys(manifest.features || {});
+        console.log(`  🔍 Available paths (first 10):`, availablePaths.slice(0, 10));
+        
+        // Check for similar paths
+        const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
+        const similarPaths = availablePaths.filter(path => 
+          path.includes(cleanPath) || cleanPath.includes(path)
+        );
+        console.log(`  🔍 Similar paths:`, similarPaths);
       }
+    } else {
+      console.log("  ❌ Could not load manifest");
     }
   } catch (error) {
-    console.error("Error loading manifest server-side:", error);
+    console.error("  ❌ Error processing images:", error);
   }
 } else {
   console.log("  ❌ No subDirectory provided");
@@ -93,15 +65,16 @@ if (subDirectory) {
 console.log("🏁 Final result - hasImage:", hasImage, "primaryImageUrl:", primaryImageUrl ? primaryImageUrl.substring(0, 50) + "..." : "none");
 ---
 
-<figure class="relative">
+<figure class="relative m-0">
   {hasImage ? (
-    <img
+    <Image
       src={primaryImageUrl}
       alt={imageName}
       width={width}
       height={height}
       class="object-contain bg-white border border-primary rounded-lg"
       loading="lazy"
+      format="webp"
     />
   ) : (
     <div class="bg-white border border-primary rounded-lg flex items-center justify-center p-4">
@@ -117,9 +90,3 @@ console.log("🏁 Final result - hasImage:", hasImage, "primaryImageUrl:", prima
     </div>
   )}
 </figure>
-
-<style>
-  figure {
-    margin: 0;
-  }
-</style>

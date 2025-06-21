@@ -53,6 +53,9 @@ if (!product) {
   return Astro.redirect("/404");
 }
 console.log('Found product:', product.data.name);
+console.log('Product fi:', product.data.featureImage);
+console.log('Product is:', product.data.featureImageSlider);
+console.log('Product ff:', product.data.farbenFotos);
  
 const { data } = product;
 
