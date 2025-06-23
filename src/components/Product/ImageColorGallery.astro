@@ -1,11 +1,9 @@
 ---
-// components/Product/ImageColorGalleryOptimized.astro
-import { Image } from "astro:assets";
-import Heading from "../ui/Heading.astro";
-import IconTiClose from "../Icons/IconTiClose.astro";
-import IconTiArrowLeft from "../Icons/IconTiArrowLeft.astro";
-import IconTiArrowRight from "../Icons/IconTiArrowRight.astro";
-import R2Image from "../ui/R2Image.astro";
+// components/Product/ImageColorGallery.astro
+import IconTiArrowLeft from '../Icons/IconTiArrowLeft.astro';
+import IconTiArrowRight from '../Icons/IconTiArrowRight.astro';
+import IconTiClose from '../Icons/IconTiClose.astro';
+import Heading from '../ui/Heading.astro';
 
 interface Props {
   subDirectory?: string;
@@ -14,20 +12,18 @@ interface Props {
 const { subDirectory = "" } = Astro.props;
 
 const uniqueId = Math.random().toString(36).substring(2, 9);
-
-console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
 ---
 
 <!-- Thumbnail Gallery -->
 <div
   id={`color-gallery-${uniqueId}`}
-  class="color-gallery grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 place-items-center gap-4 p-4"
+  class="color-gallery grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 place-items-center gap-4 p-4"
 >
   <!-- Initial loading state -->
   <div class="col-span-full text-center p-8 loading-state">
     <div class="text-4xl mb-4">🔄</div>
-    <p class="text-gray-500 mb-2">Loading color variants...</p>
-    <p class="text-sm text-gray-400">Reading from manifest</p>
+    <p class="text-base-content/50 mb-2">Loading color variants...</p>
+    <p class="text-sm text-base-content/40">Reading from manifest</p>
   </div>
 </div>
 
@@ -113,7 +109,7 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
     >
       <div class="color-image-wrapper">
         <img
-          class="color-thumbnail-image rounded-lg shadow-sm object-cover w-full h-auto"
+          class="color-thumbnail-image rounded-lg shadow-sm object-contain w-full aspect-square"
           width="200"
           height="150"
           loading="lazy"
@@ -179,21 +175,18 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
   });
 
   async function initializeColorGallery() {
-    // console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
-
     if (typeof window === "undefined") {
-      // console.log(`⚠️ Running server-side, skipping gallery initialization`);
       return;
     }
 
     const gallery = document.getElementById(`color-gallery-${uniqueId}`);
     if (!gallery) {
-      console.error("❌ Gallery container not found");
+      console.error("Gallery container not found");
       return;
     }
 
     if (!subDirectory) {
-      console.error("❌ No subDirectory provided");
+      console.error("No subDirectory provided");
       showErrorMessage("No directory specified");
       return;
     }
@@ -203,12 +196,9 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
       const colorImages = await loadImagesFromManifest(subDirectory);
 
       if (colorImages.length === 0) {
-        console.log("⚠️ No color images found in manifest");
         showNoImagesMessage();
         return;
       }
-
-      // console.log(`✅ Found ${colorImages.length} images in manifest`);
 
       // Clear loading state
       gallery.innerHTML = "";
@@ -219,7 +209,7 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
       // Test only a few images to verify they're accessible
       await quickTestImages(colorImages);
     } catch (error) {
-      console.error("❌ Error initializing gallery:", error);
+      console.error("Error initializing gallery:", error);
       showErrorMessage(`Failed to load images: ${error.message}`);
     }
   }
@@ -227,7 +217,6 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
   async function loadImagesFromManifest(subDirectory) {
     if (!manifest) {
       try {
-        console.log(`📄 Loading image manifest...`);
         const response = await fetch("/image-manifest.json");
 
         if (!response.ok) {
@@ -235,11 +224,8 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
         }
 
         manifest = await response.json();
-        // console.log(
-        //   `✅ Manifest loaded: ${Object.keys(manifest.products).length} categories`
-        // );
       } catch (error) {
-        console.error("❌ Failed to load manifest:", error);
+        console.error("Failed to load manifest:", error);
         throw new Error(`Manifest loading failed: ${error.message}`);
       }
     }
@@ -249,57 +235,21 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
       ? subDirectory.slice(1)
       : subDirectory;
     const pathParts = cleanPath.split("/");
-    const mainCategory = pathParts[0]; // e.g., "schoppel" from "schoppel/alb-lino/farben"
-    const subPath = pathParts.slice(1).join("/"); // e.g., "alb-lino/farben"
-
-    console.log(`🔍 Original path: "${cleanPath}"`);
-    console.log(`🔍 Main category: "${mainCategory}"`);
-    console.log(`🔍 Sub path: "${subPath}"`);
+    const mainCategory = pathParts[0];
+    const subPath = pathParts.slice(1).join("/");
 
     // Get all images from the main category
     const categoryImages = manifest.products[mainCategory] || [];
-    // console.log(
-    //   `📊 Found ${categoryImages.length} total images in category "${mainCategory}"`
-    // );
 
     // Filter images that match the sub-path if specified
     let filteredImages = categoryImages;
     if (subPath) {
       filteredImages = categoryImages.filter((img) => {
-        // Check if the image URL contains the sub-path
-        const imgPath = img.url.split("/products/")[1]; // Get the part after /products/
-        const imgSubPath = imgPath.split("/").slice(1).join("/"); // Remove the main category
-
-        // Remove the filename to get just the directory structure
+        const imgPath = img.url.split("/products/")[1];
+        const imgSubPath = imgPath.split("/").slice(1).join("/");
         const imgDirPath = imgSubPath.substring(0, imgSubPath.lastIndexOf("/"));
-
-        // console.log(`🔍 Checking image: ${img.filename}`);
-        // console.log(`   Image dir path: "${imgDirPath}"`);
-        // console.log(`   Looking for: "${subPath}"`);
-
         return imgDirPath.includes(subPath) || imgDirPath === subPath;
       });
-
-      // console.log(
-      //   `📊 Filtered to ${filteredImages.length} images matching sub-path "${subPath}"`
-      // );
-    }
-
-    if (filteredImages.length === 0) {
-      // Try to find partial matches
-      const availableCategories = Object.keys(manifest.products);
-      // console.log(
-      //   `📁 Available main categories: ${availableCategories.join(", ")}`
-      // );
-
-      // Show some example image paths from the main category to help debug
-      if (categoryImages.length > 0) {
-        // console.log(`📁 Example paths in "${mainCategory}" category:`);
-        categoryImages.slice(0, 5).forEach((img) => {
-          const imgPath = img.url.split("/products/")[1];
-          // console.log(`   ${imgPath}`);
-        });
-      }
     }
 
     // Transform manifest data to component format
@@ -324,7 +274,7 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
     const slideTemplate = document.getElementById(`slide-template-${uniqueId}`);
 
     if (!thumbnailTemplate || !slideTemplate) {
-      console.error("❌ Templates not found");
+      console.error("Templates not found");
       return;
     }
 
@@ -415,8 +365,6 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
   }
 
   async function quickTestImages(colorImages) {
-    // console.log(`🧪 Quick testing first few images...`);
-
     // Test only first 3 images to verify accessibility
     const testCount = Math.min(3, colorImages.length);
     let successCount = 0;
@@ -428,13 +376,9 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
           successCount++;
         }
       } catch (error) {
-        console.warn(`⚠️ Quick test failed for image ${i + 1}:`, error.message);
+        console.warn(`Quick test failed for image ${i + 1}:`, error.message);
       }
     }
-
-    // console.log(
-    //   `🏁 Quick test complete: ${successCount}/${testCount} images accessible`
-    // );
 
     if (successCount === 0) {
       showErrorMessage("Images appear to be inaccessible");
@@ -449,7 +393,7 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
 
       const timeout = setTimeout(() => {
         resolve(false);
-      }, 3000); // Shorter timeout for quick test
+      }, 3000);
 
       img.onload = () => {
         clearTimeout(timeout);
@@ -466,16 +410,10 @@ console.log(`🎨 Initializing optimized color gallery for: ${subDirectory}`);
   }
 
   function finalizeGallery() {
-    // console.log(`🏁 Finalizing gallery: ${loadedImages.length} images loaded`);
-
     // Update total count in modal
     document.querySelectorAll(".color-total-colors").forEach((el) => {
       el.textContent = loadedImages.length;
     });
-
-    // console.log(
-    //   `✅ Color gallery successfully loaded with ${loadedImages.length} images`
-    // );
   }
 
   function showNoImagesMessage() {

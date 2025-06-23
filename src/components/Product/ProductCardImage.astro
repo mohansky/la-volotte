@@ -1,8 +1,8 @@
 ---
 // components/Product/ProductCardImage.astro
 import { Image } from "astro:assets";
-import LVLogo from "../Icons/LVLogo.astro"; 
-import { findFeatureImages, getAvailableFeaturePaths, getPrimaryImageUrl } from "@/data/imageManifest";
+import LVLogo from "../Icons/LVLogo.astro";
+import { findFeatureImages, getPrimaryImageUrl } from "@/data/imageManifest";
 
 interface Props {
   subDirectory?: string;
@@ -11,9 +11,6 @@ interface Props {
 }
 
 const { subDirectory = "", width = 600, height = 600 } = Astro.props;
-
-console.log("🔍 ProductCardImage Debug:");
-console.log("  subDirectory prop:", JSON.stringify(subDirectory));
 
 function getProductName(csvPath: string): string {
   if (!csvPath) return "Image";
@@ -30,33 +27,15 @@ let hasImage = false;
 if (subDirectory) {
   try {
     const featureImages = findFeatureImages(subDirectory);
-    
+   
     if (featureImages.length > 0) {
       primaryImageUrl = getPrimaryImageUrl(featureImages);
       hasImage = true;
-      console.log(`  ✅ Found ${featureImages.length} images, selected: ${featureImages[0].filename}`);
-    } else {
-      console.log(`  ❌ No images found for path: ${subDirectory}`);
-      
-      // Debug: Show available feature paths
-      const availablePaths = getAvailableFeaturePaths();
-      console.log(`  🔍 Available paths (first 10):`, availablePaths.slice(0, 10));
-      
-      // Check for similar paths
-      const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
-      const similarPaths = availablePaths.filter(path => 
-        path.includes(cleanPath) || cleanPath.includes(path)
-      );
-      console.log(`  🔍 Similar paths:`, similarPaths);
     }
   } catch (error) {
-    console.error("  ❌ Error processing images:", error);
+    console.error("Error processing images:", error);
   }
-} else {
-  console.log("  ❌ No subDirectory provided");
 }
-
-console.log("🏁 Final result - hasImage:", hasImage, "primaryImageUrl:", primaryImageUrl ? primaryImageUrl.substring(0, 50) + "..." : "none");
 ---
 
 <figure class="relative m-0">
@@ -66,18 +45,18 @@ console.log("🏁 Final result - hasImage:", hasImage, "primaryImageUrl:", prima
       alt={imageName}
       width={width}
       height={height}
-      class="object-contain bg-white border border-primary rounded-lg"
+      class="object-contain bg-base-100 border border-primary rounded-lg"
       loading="lazy"
       format="webp"
     />
   ) : (
-    <div class="bg-white border border-primary rounded-lg flex items-center justify-center p-4">
+    <div class="bg-base-100 border border-primary rounded-lg flex items-center justify-center p-4">
       <div class="text-center">
         <LVLogo />
-        <div class="text-xs mt-2 text-gray-500 max-w-32 overflow-hidden">
+        <div class="text-xs mt-2 text-base-content/50 max-w-32 overflow-hidden text-center">
           Path: {subDirectory || "none"}
         </div>
-        <div class="text-xs text-red-500">
+        <div class="text-xs text-error">
           No image found
         </div>
       </div>

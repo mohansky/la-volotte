@@ -62,8 +62,10 @@ class ProductFilter {
       clearFiltersBtn: document.getElementById("clearFilters"),
       clearFiltersBtnMobile: document.getElementById("clearFiltersMobile"),
       pageSizeSelector: document.getElementById("pageSizeSelector"),
+      pageSizeSelectorMobile: document.getElementById("pageSizeSelectorMobile"),
       paginationContainer: document.getElementById("paginationContainer"),
       pageInfo: document.getElementById("pageInfo"),
+      pageInfoMobile: document.getElementById("pageInfoMobile"),
       leftArrowIcon: document.getElementById("leftArrowIcon"),
       rightArrowIcon: document.getElementById("rightArrowIcon"),
       filterDrawer: document.getElementById("filterDrawer"),
@@ -132,6 +134,9 @@ class ProductFilter {
     if (this.elements.markeFilterMobile) this.elements.markeFilterMobile.value = markeValue;
     if (this.elements.nadelstaerkeFilterMobile) this.elements.nadelstaerkeFilterMobile.value = nadelstaerkeValue;
     if (this.elements.materialFilterMobile) this.elements.materialFilterMobile.value = materialValue;
+    if (this.elements.pageSizeSelectorMobile) {
+      this.elements.pageSizeSelectorMobile.value = pageSizeValue;
+    }
     
     this.state.currentPage = parseInt(params.get('page') || '1');
   }
@@ -217,15 +222,25 @@ class ProductFilter {
       }
     });
 
-    // Page size selector
-    if (this.elements.pageSizeSelector) {
-      this.elements.pageSizeSelector.addEventListener("change", (e) => {
-        this.state.pageSize = parseInt(e.target.value);
-        this.state.currentPage = 1;
-        this.applyFiltersAndSearch();
-        this.updateURL();
-      });
-    }
+    // Page size selector events
+    [this.elements.pageSizeSelector, this.elements.pageSizeSelectorMobile].forEach(selector => {
+      if (selector) {
+        selector.addEventListener("change", (e) => {
+          this.state.pageSize = parseInt(e.target.value);
+          this.state.currentPage = 1;
+          
+          // Sync both selectors
+          if (selector === this.elements.pageSizeSelector) {
+            this.syncFilters(selector, this.elements.pageSizeSelectorMobile);
+          } else {
+            this.syncFilters(selector, this.elements.pageSizeSelector);
+          }
+          
+          this.applyFiltersAndSearch();
+          this.updateURL();
+        });
+      }
+    });
 
     // Clear filters buttons
     [this.elements.clearFiltersBtn, this.elements.clearFiltersBtnMobile].forEach(btn => {
@@ -404,21 +419,30 @@ class ProductFilter {
     const totalProducts = this.state.filteredProducts.length;
     const totalPages = Math.ceil(totalProducts / this.state.pageSize);
 
-    if (!this.elements.paginationContainer || !this.elements.pageInfo) return;
+    if (!this.elements.paginationContainer) return;
 
     if (totalProducts === 0) {
       this.elements.paginationContainer.style.display = "none";
-      this.elements.pageInfo.style.display = "none";
+      if (this.elements.pageInfo) this.elements.pageInfo.style.display = "none";
+      if (this.elements.pageInfoMobile) this.elements.pageInfoMobile.style.display = "none";
       return;
     }
 
     this.elements.paginationContainer.style.display = "flex";
-    this.elements.pageInfo.style.display = "block";
 
-    // Update page info
+    // Update page info for both desktop and mobile
     const startItem = totalProducts === 0 ? 0 : (this.state.currentPage - 1) * this.state.pageSize + 1;
     const endItem = Math.min(this.state.currentPage * this.state.pageSize, totalProducts);
-    this.elements.pageInfo.textContent = `${startItem} - ${endItem} von ${totalProducts} Produkten`;
+    const pageInfoText = `${startItem} - ${endItem} von ${totalProducts} Produkten`;
+    
+    if (this.elements.pageInfo) {
+      this.elements.pageInfo.style.display = "block";
+      this.elements.pageInfo.textContent = pageInfoText;
+    }
+    if (this.elements.pageInfoMobile) {
+      this.elements.pageInfoMobile.style.display = "block";
+      this.elements.pageInfoMobile.textContent = pageInfoText;
+    }
 
     // Clear pagination
     this.elements.paginationContainer.innerHTML = "";
@@ -588,6 +612,18 @@ document.addEventListener("DOMContentLoaded", () => {
               </select>
             </fieldset>
 
+            <fieldset class="fieldset">
+              <legend class="fieldset-legend font-light opacity-75">Produkte pro Seite</legend>
+              <select
+                id="pageSizeSelectorMobile"
+                class="select select-primary w-full"
+              >
+                <option value="12">12</option>
+                <option value="24">24</option>
+                <option value="48">48</option>
+              </select>
+            </fieldset>
+
             <button id="clearFiltersMobile" class="hidden btn btn-soft w-full">
               <IconTiClose class="w-3 h-3" />
               Filter zurücksetzen
@@ -675,21 +711,6 @@ document.addEventListener("DOMContentLoaded", () => {
               </button>
             </div>
           </div>
-        </div>
-
-        <!-- Products per page selector for mobile -->
-        <div class="mb-4 md:hidden">
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend font-light opacity-75">Produkte pro Seite</legend>
-            <select
-              id="pageSizeSelectorMobile"
-              class="select select-primary w-full"
-            >
-              <option value="12">12</option>
-              <option value="24">24</option>
-              <option value="48">48</option>
-            </select>
-          </fieldset>
         </div>
 
         <!-- Page Info for Mobile -->

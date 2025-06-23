@@ -1,6 +1,6 @@
 ---
 // components/Product/ImageFeatureSlider.astro
-import { findFeatureImages, getAvailableFeaturePaths } from "@/data/imageManifest";
+import { findFeatureImages } from "@/data/imageManifest";
 import { Image } from "astro:assets";
 
 interface Props {
@@ -30,9 +30,6 @@ let errorMessage = "";
 
 if (subDirectory) {
   try {
-    console.log(`🖼️ Loading feature images from manifest for: ${subDirectory}`);
-    
-    // Use the generated manifest data
     const rawFeatureImages = findFeatureImages(subDirectory);
     
     if (rawFeatureImages.length > 0) {
@@ -56,25 +53,11 @@ if (subDirectory) {
       }));
       
       hasImages = true;
-      console.log(`✅ Found ${featureImages.length} feature images from manifest`);
     } else {
-      console.log("⚠️ No feature images found in manifest");
-      
-      // Debug: Show available feature paths for troubleshooting
-      const availablePaths = getAvailableFeaturePaths();
-      console.log(`🔍 Available feature paths (first 10):`, availablePaths.slice(0, 10));
-      
-      // Check for similar paths
-      const cleanPath = subDirectory.startsWith("/") ? subDirectory.slice(1) : subDirectory;
-      const similarPaths = availablePaths.filter(path => 
-        path.includes(cleanPath) || cleanPath.includes(path)
-      );
-      console.log(`🔍 Similar paths for "${cleanPath}":`, similarPaths);
-      
-      errorMessage = `No images found for "${cleanPath}"`;
+      errorMessage = `No images found for "${subDirectory}"`;
     }
   } catch (error) {
-    console.error("❌ Error loading feature images from manifest:", error);
+    console.error("Error loading feature images from manifest:", error);
     errorMessage = `Failed to load images: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
 } else {
@@ -85,7 +68,7 @@ if (subDirectory) {
 <div class="w-full h-full relative overflow-hidden flex flex-col">
   {hasImages ? (
     <>
-      {/* <!-- Main Slider --> */}
+      {/* Main Slider */}
       <div id={mainSliderId} class="swiper w-full flex-grow">
         <div class="swiper-wrapper" id={`main-wrapper-${uniqueId}`}>
           {featureImages.map((img, index) => (
@@ -109,7 +92,7 @@ if (subDirectory) {
         <div class="swiper-button-prev"></div>
       </div>
 
-      {/* <!-- Thumbnail Slider --> */}
+      {/* Thumbnail Slider */}
       <div id={thumbsSliderId} class="swiper mt-2">
         <div class="swiper-wrapper" id={`thumbs-wrapper-${uniqueId}`}>
           {featureImages.map((img) => (
@@ -132,7 +115,6 @@ if (subDirectory) {
       </div>
     </>
   ) : (
-    // <!-- Error/No Images State -->
     <div class="w-full h-64 flex items-center justify-center">
       <div class="text-center">
         {errorMessage.includes("No images found") ? (
@@ -153,13 +135,11 @@ if (subDirectory) {
   )}
 </div>
 
-{/* <!-- Swiper CSS --> */}
 <link
   rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.css"
 />
 
-{/* <!-- Swiper Initialization Script --> */}
 <script define:vars={{ mainSliderId, thumbsSliderId, uniqueId, imageCount: featureImages.length }}>
   let swiperInitialized = false;
 
@@ -174,12 +154,9 @@ if (subDirectory) {
 
   async function initializeSwiper() {
     if (swiperInitialized) return;
-    
-    console.log(`🎛️ Initializing Swiper with ${imageCount} pre-loaded slides`);
 
     // Load Swiper if not already loaded
     if (typeof Swiper === "undefined") {
-      console.log("📦 Loading Swiper library...");
       const script = document.createElement("script");
       script.src = "https://cdnjs.cloudflare.com/ajax/libs/Swiper/10.2.0/swiper-bundle.min.js";
       script.onload = initializeSwiper;
@@ -191,14 +168,12 @@ if (subDirectory) {
     const thumbsContainer = document.getElementById(thumbsSliderId);
 
     if (!mainContainer || !thumbsContainer) {
-      console.error("❌ Slider containers not found");
+      console.error("Slider containers not found");
       return;
     }
 
-    // Check if we have slides (they should already be rendered)
     const mainSlides = mainContainer.querySelectorAll('.swiper-slide');
     if (mainSlides.length === 0) {
-      console.log('⚠️ No slides found for Swiper initialization');
       return;
     }
 
@@ -239,7 +214,6 @@ if (subDirectory) {
     setTimeout(() => {
       mainSwiper.update();
       thumbsSwiper.update();
-      console.log(`✅ Swiper initialized successfully with ${mainSlides.length} slides`);
     }, 100);
   }
 </script>

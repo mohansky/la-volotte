@@ -13,10 +13,26 @@ import ListOrdered from "@/components/ui/ListOrdered.astro";
 import ListUnordered from "@/components/ui/ListUnordered.astro";
 import Para from "@/components/ui/Para.astro";
 import Paragraph from "@/components/ui/Paragraph.astro";
-import Layout from "@/layouts/Layout.astro"; 
+import Layout from "@/layouts/Layout.astro";
 import { getCollection, getEntry, render } from "astro:content";
- 
 
+// Get the slug from the incoming request
+const { slug } = Astro.params;
+if (slug === undefined) {
+  return Astro.redirect("/404");
+}
+
+// Filter out non-content requests
+const invalidPatterns = [
+  /\.(js|css|json|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i,
+  /^(config|api|admin|_|\.)/,
+  /^(robots\.txt|sitemap\.xml|favicon\.ico|config\.js)$/i
+];
+
+if (invalidPatterns.some(pattern => pattern.test(slug))) {
+  return new Response(null, { status: 404 });
+}
+ 
 export async function getStaticPaths() {
   const rechtliches = await getCollection("rechtliches", ({ data }) => {
     return data.draft !== true;
@@ -28,7 +44,6 @@ export async function getStaticPaths() {
 }
 
 const { rechtlich } = Astro.props;
-
 const entry = await getEntry("rechtliches", rechtlich.id);
 if (!entry) {
   throw new Error("Could not find page: " + rechtlich.id);

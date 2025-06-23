@@ -32,34 +32,21 @@ if (id === undefined) {
 const invalidPatterns = [
   /\.(js|css|json|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i,
   /^(config|api|admin|_|\.)/,
-  /^(robots\.txt|sitemap\.xml|favicon\.ico)$/i
+  /^(robots\.txt|sitemap\.xml|favicon\.ico|config\.js)$/i
 ];
 
 if (invalidPatterns.some(pattern => pattern.test(id))) {
   return new Response(null, { status: 404 });
 }
 
-console.log('Looking for product with ID:', id);
- 
 const products = await getCollection("products");
 const product = products.find(p => p.data.id === id);
  
-if (product === undefined) {
-  return Astro.redirect("/404");
-}
-
 if (!product) {
-  console.error('Product not found:', id);
   return Astro.redirect("/404");
 }
-console.log('Found product:', product.data.name);
-console.log('Product fi:', product.data.featureImage);
-console.log('Product is:', product.data.featureImageSlider);
-console.log('Product ff:', product.data.farbenFotos);
- 
-const { data } = product;
 
- 
+const { data } = product;
 
 // Format currency
 const formatCurrency = (amount: number) => {
@@ -71,7 +58,6 @@ const formatCurrency = (amount: number) => {
 ---
 
 <script>
-// Alternative: More TypeScript-friendly approach
 (function() {
   function initProductPageNavigation() {
     const backButton = document.getElementById('backToProducts') as HTMLAnchorElement;

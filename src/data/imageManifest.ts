@@ -1,5 +1,5 @@
 // This file is auto-generated. Do not edit manually.
-// Generated from image-manifest.json at: 2025-06-21T14:55:53.673Z
+// Generated from image-manifest.json at: 2025-06-23T04:03:00.837Z
 
 export interface ImageFile {
   filename: string;
@@ -16,7 +16,7 @@ export interface ImageManifest {
 }
 
 export const imageManifest: ImageManifest = {
-  "generated": "2025-06-21T14:55:49.175Z",
+  "generated": "2025-06-23T04:02:56.032Z",
   "products": {
     "bc-garn": [
       {
